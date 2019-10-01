@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"net/http"
 )
-
+// Data structure to contain the input data
 type RuneSlice []rune
 func (r RuneSlice) Len() int { 
 	return len(r)
@@ -16,7 +17,6 @@ func (r RuneSlice) Swap(i, j int) {
 func (r RuneSlice) Less(i, j int) bool {
 	return r[i] < r[j]
 }
-
 func getKey(s string) string {
 	r := (RuneSlice)(strings.ToLower(s))
 	sort.Sort(r)
@@ -48,7 +48,7 @@ func (data multimap)multimap_retrieve() (ret []string) {
 	}
 	return
 }
-
+/*
 type registry struct{
 	indices map[string] []int
 	dict []string
@@ -79,6 +79,14 @@ func (data registry)registry_get(val string) (ret []string) {
 func (data registry)registry_retrieve() (ret []string) {
 	return data.dict
 }
+*/
+
+// server part
+func handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "%s", r.URL.Path[1:])
+	fmt.Println(r.URL.Path[1:])
+}
+
 
 var dict[]string = []string{"foobar", "barfoo", "boofar", "живу", "вижу", "Abba", "BaBa", "abba", "bba"}
 
@@ -90,4 +98,7 @@ func main() {
 	for _, val := range dict {
 		fmt.Println(val, data.multimap_get(val))
 	}
+	fmt.Println("serving...")
+	http.HandleFunc("/", handler)
+	http.ListenAndServe("localhost:8080", nil)
 }
