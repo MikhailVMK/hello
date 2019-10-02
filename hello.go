@@ -1,10 +1,11 @@
 package main
-
 import (
-	"fmt"
+	// "fmt"
 	"sort"
 	"strings"
 	"net/http"
+	"encoding/json"
+	"log"
 )
 // Data structure to contain the input data
 type RuneSlice []rune
@@ -22,9 +23,8 @@ func getKey(s string) string {
 	sort.Sort(r)
 	return string(r)
 }
-
 type multimap map[string] []string
-func (data multimap)multimap_insert(val string) {
+func (data multimap)insert(val string) {
 	key := getKey(val)
 	lst, ok := data[key]
 	if ok {
@@ -38,67 +38,51 @@ func (data multimap)multimap_insert(val string) {
 		data[key] = append(make([]string, 0), val)
 	}
 }
-func (data multimap)multimap_get(val string) (ret []string) {
+func (data multimap)get(val string) (ret []string) {
 	ret, _ = data[getKey(val)]
 	return
 }
-func (data multimap)multimap_retrieve() (ret []string) {
-	for _, v := range data {
-		ret = append(ret, v...)
-	}
-	return
-}
-/*
-type registry struct{
-	indices map[string] []int
-	dict []string
-}
-func (data registry)registry_insert(val string) {
-	key := getKey(val)
-	indices, ok := data.indices[key]
-	if ok {
-		for _, index := range indices {
-			if data.dict[index] == val {
-				return
-			}
-		}
-		data.indices[key] = append(indices, len(data.dict))
-		data.dict = append(data.dict, val) 
-	} else {
-		data.indices[key] = append(make([]int, 0), len(data.dict))
-		data.dict = append(data.dict, val) 
-	}
-}
-func (data registry)registry_get(val string) (ret []string) {
-	indices, _ := data.indices[getKey(val)]
-	for _, index := range indices {
-		ret = append(ret, data.dict[index])
-	} 
-	return
-}
-func (data registry)registry_retrieve() (ret []string) {
-	return data.dict
-}
-*/
-
 // server part
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "%s", r.URL.Path[1:])
-	fmt.Println(r.URL.Path[1:])
+type handler struct {
+	data multimap
 }
-
-
-var dict[]string = []string{"foobar", "barfoo", "boofar", "живу", "вижу", "Abba", "BaBa", "abba", "bba"}
-
+func (h handler)handleGet(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		log.Fatal(err)
+	}
+	val := r.FormValue("word")
+	b, err := json.Marshal(h.data.get(val))
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = w.Write(b)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+func (h handler)handleLoad(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		log.Fatal(err)
+	}
+	var m []string
+	for key, _ := range r.PostForm {
+		err := json.Unmarshal([]byte(key), &m)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, val := range m {
+			h.data.insert(val)
+		}
+	}
+}
+// main
 func main() {
-	data := make(multimap) 
-	for _, val := range dict {
-		data.multimap_insert(val)
-	}
-	for _, val := range dict {
-		fmt.Println(val, data.multimap_get(val))
-	}
-	fmt.Println("serving...")
-	http.HandleFunc("/", handler)
-	http.ListenAndServe("localhost:8080", nil)
+	port := "8080"
+	host := "localhost"
+	h := handler{make(multimap)} 
+		
+	http.HandleFunc("/get", h.handleGet)
+	http.HandleFunc("/load", h.handleLoad)
+
+	http.ListenAndServe(host + ":" + port, nil)
 }
