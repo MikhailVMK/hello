@@ -9,23 +9,23 @@ import (
 )
 // Data structure to contain the input data
 type RuneSlice []rune
-func (r RuneSlice) Len() int { 
+func (r RuneSlice)Len() int { 
 	return len(r)
 }
-func (r RuneSlice) Swap(i, j int) {
+func (r RuneSlice)Swap(i, j int) {
 	r[i], r[j] = r[j], r[i]
 }
-func (r RuneSlice) Less(i, j int) bool {
+func (r RuneSlice)Less(i, j int) bool {
 	return r[i] < r[j]
 }
-func getKey(s string) string {
+func GetKey(s string) string {
 	r := (RuneSlice)(strings.ToLower(s))
 	sort.Sort(r)
 	return string(r)
 }
 type multimap map[string] []string
-func (data multimap)insert(val string) {
-	key := getKey(val)
+func (data multimap)Insert(val string) {
+	key := GetKey(val)
 	lst, ok := data[key]
 	if ok {
 		for _, el := range lst {
@@ -38,20 +38,20 @@ func (data multimap)insert(val string) {
 		data[key] = append(make([]string, 0), val)
 	}
 }
-func (data multimap)get(val string) (ret []string) {
-	ret, _ = data[getKey(val)]
+func (data multimap)Get(val string) (ret []string) {
+	ret, _ = data[GetKey(val)]
 	return
 }
 // server part
 type handler struct {
 	data multimap
 }
-func (h handler)handleGet(w http.ResponseWriter, r *http.Request) {
+func (h *handler)handleGet(w http.ResponseWriter, r *http.Request) { 
 	if err := r.ParseForm(); err != nil {
 		log.Fatal(err)
 	}
 	val := r.FormValue("word")
-	b, err := json.Marshal(h.data.get(val))
+	b, err := json.Marshal(h.data.Get(val))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,7 +60,8 @@ func (h handler)handleGet(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 }
-func (h handler)handleLoad(w http.ResponseWriter, r *http.Request) {
+func (h *handler)handleLoad(w http.ResponseWriter, r *http.Request) { 
+	h.data = make(multimap)   
 	if err := r.ParseForm(); err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +72,7 @@ func (h handler)handleLoad(w http.ResponseWriter, r *http.Request) {
 			log.Fatal(err)
 		}
 		for _, val := range m {
-			h.data.insert(val)
+			h.data.Insert(val)
 		}
 	}
 }
@@ -79,10 +80,10 @@ func (h handler)handleLoad(w http.ResponseWriter, r *http.Request) {
 func main() {
 	port := "8080"
 	host := "localhost"
-	h := handler{make(multimap)} 
-		
-	http.HandleFunc("/get", h.handleGet)
-	http.HandleFunc("/load", h.handleLoad)
+	h := handler{nil} 
+	
+	http.HandleFunc("/get", (&h).handleGet)
+	http.HandleFunc("/load", (&h).handleLoad)
 
 	http.ListenAndServe(host + ":" + port, nil)
 }
